@@ -1,0 +1,6 @@
+CTkTable==1.1
+free_proxy==1.1.1
+Requests==2.31.0
+setuptools==68.0.0
+tkcalendar==1.6.1
+typing_extensions==4.11.0
