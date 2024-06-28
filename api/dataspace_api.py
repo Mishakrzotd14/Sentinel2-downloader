@@ -1,15 +1,15 @@
 import errno
 import os
-import sys
 import shutil
+import sys
 
 import boto3
 import requests
 from fp.fp import FreeProxy
 
-from gui.gui_utils import InformationTable, DownloadBarFrame, DownloadProgressBar
+from gui.gui_utils import DownloadBarFrame, DownloadProgressBar, InformationTable
 
-SRID = '4326'
+SRID = "4326"
 TIME_FORMAT = "T00:00:00.000Z"
 TIME_END_FORMAT = "T12:00:00.000Z"
 ENDPOINT_URL = "https://eodata.dataspace.copernicus.eu/"
@@ -33,7 +33,7 @@ def get_tile_list(satellite_grid, input_shapefile):
     for tile_grid in sorted_list:
         if tile_grid.geometry.intersects(single_polygon):
             single_polygon = single_polygon.difference(tile_grid.geometry)
-            tiles.append(tile_grid['Name'])
+            tiles.append(tile_grid["Name"])
 
     return tiles
 
@@ -76,56 +76,56 @@ def get_s3path(qp, satellite_grid, input_shapefile):
         all_proxies = FreeProxy(timeout=1, rand=True).get_proxy_list(repeat=False)
 
         for proxy in all_proxies:
-            proxies = {
-                'http': proxy,
-                'https': proxy
-            }
+            proxies = {"http": proxy, "https": proxy}
             url = f"https://catalogue.dataspace.copernicus.eu/odata/v1/Products?$filter={filter_query}"
 
             try:
                 result = requests.get(url, timeout=60, allow_redirects=False, proxies=proxies).json()
                 zones = get_tile_list(satellite_grid, input_shapefile)
-                print('Зоны, покрывающие область интересов:', ", ".join(map(str, zones)))
-                if result.get('value'):
-                    products_s3path = [product['S3Path'] for product in result['value'] if
-                                       any(zone == product['Name'][39:44] for zone in zones)]
+                print("Зоны, покрывающие область интересов:", ", ".join(map(str, zones)))
+                if result.get("value"):
+                    products_s3path = [
+                        product["S3Path"]
+                        for product in result["value"]
+                        if any(zone == product["Name"][39:44] for zone in zones)
+                    ]
                     if products_s3path:
                         return products_s3path
                     else:
-                        print('No products found in CDSE catalogue')
+                        print("Продукты не найдены в каталоге CDSE")
                         sys.exit()
                 else:
-                    print('No products found in CDSE catalogue')
+                    print("В каталоге CDSE не найдено продуктов с указанными параметрами")
                     sys.exit()
 
             except requests.RequestException as e:
-                print(f"Error with proxy")
                 continue
     except Exception as e:
-        print(f'An error occurred: {e}')
+        print(f"Произошла ошибка: {e}")
         sys.exit()
 
 
 def download_file(resource, bucket, obj, target_directory):
     target = os.path.join(target_directory, obj.key)
 
-    if obj.key.endswith('/'):
+    if obj.key.endswith("/"):
         make_path(target)
     else:
         dirname = os.path.dirname(target)
-        if dirname != '':
+        if dirname != "":
             make_path(dirname)
         resource.Object(bucket, obj.key).download_file(target)
 
 
-def download_sentinel_images(access_key, secret_key, qp, satellite_grid, input_shapefile, target_directory, master_frame):
+def download_sentinel_images(
+    access_key, secret_key, qp, satellite_grid, input_shapefile, target_directory, master_frame
+):
     s3_path = get_s3path(qp, satellite_grid, input_shapefile)
 
-    data_for_table = [[path.split("/")[-1], 'need to download'] for path in s3_path]
+    data_for_table = [[path.split("/")[-1], "необходимо загрузить"] for path in s3_path]
     information_table = InformationTable(master=master_frame, data=data_for_table)
     products_path = []
     for s3path_prod in s3_path:
-
         s3path = s3path_prod.removeprefix(f"/{BUCKET}/")
         file_name = s3path.split("/")[-1]
         dirname = os.path.dirname(s3path)
@@ -134,38 +134,38 @@ def download_sentinel_images(access_key, secret_key, qp, satellite_grid, input_s
             make_path(os.path.join(target_directory, dirname))
         fls = os.listdir(os.path.join(target_directory, dirname))
 
-        resource = boto3.resource(service_name="s3", aws_access_key_id=access_key, aws_secret_access_key=secret_key,
-                                  endpoint_url=ENDPOINT_URL)
-        s3path = s3path + ''
+        resource = boto3.resource(
+            service_name="s3", aws_access_key_id=access_key, aws_secret_access_key=secret_key, endpoint_url=ENDPOINT_URL
+        )
+        s3path = s3path + ""
         objects = list(resource.Bucket(BUCKET).objects.filter(Prefix=s3path))
 
         s3_size = sum([obj.size for obj in objects])
         if not objects:
-            raise Exception(f"could not find product '' in CDSE object store")
+            raise Exception("Продукты не найдены в каталоге CDSE")
 
         size_directory = get_folder_size(os.path.join(target_directory, s3path))
 
         download_location = os.path.join(target_directory, s3path)
 
         if file_name in fls and s3_size == size_directory:
-
-            print(f'Файл {file_name} находится в папке')
+            print(f"Файл {file_name} находится в папке")
             for row_num, row in enumerate(data_for_table):
                 if row[0] == file_name:
                     # Изменить значение в поле 1 на new_status
-                    information_table.insert(row_num, 1, 'in directory')
+                    information_table.insert(row_num, 1, "в папке")
                     break
             products_path.append(s3path)
 
         else:
-            if os.path.exists(os.path.join(download_location, 'GRANULE')):
-                shutil.rmtree(os.path.join(download_location, 'GRANULE'))
+            if os.path.exists(os.path.join(download_location, "GRANULE")):
+                shutil.rmtree(os.path.join(download_location, "GRANULE"))
 
-            print(f'Файл {file_name} не находится в папке. Скачивание...')
+            print(f"Продукт {file_name} не находится в папке. Необходимо загрузить...")
             for row_num, row in enumerate(data_for_table):
                 if row[0] == file_name:
                     # Изменить значение в поле 1 на new_status
-                    information_table.insert(row_num, 1, 'downloading...')
+                    information_table.insert(row_num, 1, "загрузка...")
                     break
 
             download_barr = DownloadBarFrame(master=master_frame)
@@ -173,11 +173,11 @@ def download_sentinel_images(access_key, secret_key, qp, satellite_grid, input_s
 
             for obj in objects:
                 download_file(resource, BUCKET, obj, target_directory)
-            print(f'Снимок {file_name} загружен!')
+            print(f"Продукт Sentinel-2: {file_name} загружен!")
             for row_num, row in enumerate(data_for_table):
                 if row[0] == file_name:
                     # Изменить значение в поле 1 на new_status
-                    information_table.insert(row_num, 1, 'downloaded!')
+                    information_table.insert(row_num, 1, "загружено!")
                     break
             products_path.append(s3path)
 
