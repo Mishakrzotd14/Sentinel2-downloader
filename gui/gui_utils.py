@@ -1,6 +1,7 @@
 import os
 import time
 import tkinter as tk
+
 import customtkinter as ctk
 from CTkTable import *
 
@@ -43,30 +44,27 @@ class DownloadProgressBar:
         self.update_interval = update_interval
 
         self.progressbar_download = ctk.CTkProgressBar(
-            self.parent_frame, orientation='horizontal', width=400,
-            height=20, fg_color='#3C3C3C', progress_color='#329acd',
-            mode='determinate'
+            self.parent_frame,
+            orientation="horizontal",
+            width=400,
+            height=20,
+            fg_color="#3C3C3C",
+            progress_color="#329acd",
+            mode="determinate",
         )
         self.progressbar_download.set(0)
         self.progressbar_download.grid(row=0, column=0, padx=5, pady=2)
 
         self.progress_text = tk.StringVar()
-        progress_label_widget = ctk.CTkLabel(self.parent_frame, textvariable=self.progress_text, font=("Helvetica", 14)
-                                             )
+        progress_label_widget = ctk.CTkLabel(self.parent_frame, textvariable=self.progress_text, font=("Helvetica", 14))
         progress_label_widget.grid(row=0, column=1, padx=5, pady=2)
 
         self.size_text = tk.StringVar()
-        size_label = ctk.CTkLabel(
-            self.parent_frame, textvariable=self.size_text, font=("Helvetica", 14)
-        )
+        size_label = ctk.CTkLabel(self.parent_frame, textvariable=self.size_text, font=("Helvetica", 14))
         size_label.grid(row=0, column=2, padx=5, pady=2)
 
         self.speed_text = tk.StringVar()
-        speed_label = ctk.CTkLabel(
-            self.parent_frame,
-            textvariable=self.speed_text,
-            font=("Helvetica", 14)
-        )
+        speed_label = ctk.CTkLabel(self.parent_frame, textvariable=self.speed_text, font=("Helvetica", 14))
         speed_label.grid(row=0, column=3, padx=5, pady=2)
 
         self.start_time = time.time()
@@ -102,7 +100,6 @@ class DownloadProgressBar:
 
 class DownloadBarFrame(ctk.CTkFrame):
     """Class for a frame containing the download bar."""
-
     def __init__(self, master):
         super().__init__(master)
         self.download_barr_frame = ctk.CTkFrame(master=master)
@@ -111,7 +108,6 @@ class DownloadBarFrame(ctk.CTkFrame):
 
 class InformationTable(CTkTable):
     """Class for displaying an information table."""
-
     def __init__(self, master, data):
-        super().__init__(master, values=data, corner_radius=0, hover_color='#329acd')
+        super().__init__(master, values=data, corner_radius=0, hover_color="#329acd")
         self.pack(expand=True, fill="both", padx=20, pady=20)
